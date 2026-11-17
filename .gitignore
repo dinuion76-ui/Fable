@@ -1,3 +1,4 @@
 build/parts.json
+build/npc_*.json
 build/walk.png
 node_modules/

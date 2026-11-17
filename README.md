@@ -1,7 +1,9 @@
 # Liège, 1800s — Roblox map
 
 A 1000 × 1000 stud map of 19th-century Liège, the Belgian gunmaking city where L. Dolne built the
-"Apache" knuckleduster revolver. It is a map only: no weapons, no game scripts.
+"Apache" knuckleduster revolver, and 63 period NPC models to fill it (townsfolk, workers, police,
+the Apache gang, named characters and three bosses). No weapons and no gameplay scripts: the map
+lights itself, everything else is models and data.
 
 ![Aerial view from the south-east](docs/aerial_se.jpg)
 
@@ -18,8 +20,10 @@ materials, lighting, fog and the text on signs will look different in Studio.
 | File | Use |
 |---|---|
 | `build/Liege1800s.rbxm` | The map as one model. Drag it into your existing place. |
-| `build/Liege1800s_Preview.rbxl` | A standalone place with the lighting preset applied, for a quick look. |
-| `src/LiegeMap.luau` | The generator that produced both files. |
+| `build/Liege1800s_Preview.rbxl` | A standalone place with the lighting applied and 98 NPCs standing at their markers. |
+| `build/LiegeNPCs_R15.rbxm`, `build/LiegeNPCs_R6.rbxm` | The 63 NPC models (same characters, two rig types) and the `NPCCatalog` module. |
+| `docs/NPC_SETUP.md` | NPC setup, what each model contains, and the to-do list for scripting them on PC. |
+| `src/LiegeMap.luau`, `src/LiegeNPCs.luau`, `src/LiegeNPCPlacements.luau` | The generators. |
 
 ## Adding it to your game
 
@@ -34,6 +38,9 @@ materials, lighting, fog and the text on signs will look different in Studio.
 3. Spawns: `SpawnMarkers` holds 24 invisible, non-colliding parts (attribute `LiegeSpawn = true`)
    spread over both banks, the hillside and the citadel. Read their positions from your own spawn
    code, or delete the folder.
+4. NPCs: put `LiegeNPCs_R15.rbxm` (or `_R6`) in `ServerStorage` and read
+   [docs/NPC_SETUP.md](docs/NPC_SETUP.md). Where each character belongs is in the map's
+   `NPCMarkers` folder.
 
 ## Lighting and ambience
 
@@ -81,6 +88,29 @@ while the game runs; changes are picked up within a second):
 To restyle a mood, edit the numbers in the `presets` table at the top of
 `Ambience.AmbienceCore`.
 
+## NPCs
+
+![The three bosses](docs/npc_bosses.jpg)
+
+| | |
+|---|---|
+| ![Place du Marché with vendors](docs/npc_city_marche.jpg) | ![The Estaminet](docs/npc_city_estaminet.jpg) |
+| ![Citadel gate guards](docs/npc_city_citadel.jpg) | ![The Butcher in the Halle aux Viandes](docs/npc_city_halle.jpg) |
+
+- **63 models, 38 character types**, built from plain parts in the same style as the map:
+  - 3 bosses: the Butcher of the Batte, the Foundry Master and the Apache King.
+  - 7 named characters, Louis Dolne among them.
+  - The Apache gang.
+  - 24 kinds of townsfolk, workers, soldiers and police.
+- **R15 and R6 versions** of every character, with standard joint and attachment names, so stock
+  animations, accessories and Tools work. No animations are included.
+- **Placed on the map**: 95 spawn markers, 7 patrol routes path-found around the street clutter,
+  and 3 boss arenas with doorway barriers. All of them are checked against the map's collision
+  geometry.
+
+Setup, the contents of each model, and the scripting to-do list are in
+[docs/NPC_SETUP.md](docs/NPC_SETUP.md).
+
 ## Layout
 
 North is `-Z`, east is `+X`. The Meuse runs north–south through the middle.
@@ -124,6 +154,7 @@ routes up, and you can drop down the terraces quickly.
 - 126 `PointLight`s, all with shadows off, and 7 smoke emitters. If that is too many for low-end phones, regenerate with
   `lampLights = false`, or delete the lights inside the `GasLamps` model.
 - `MapLimits` holds four invisible walls at the edge of the footprint.
+- `NPCMarkers` adds 184 invisible, non-interacting marker parts (spawns, waypoints, arena volumes).
 
 ## Historical accuracy
 
@@ -160,7 +191,11 @@ Options: `seed` (house variation), `lampLights` (default `true`), `spawnLocation
 
 The Studio route does not embed the `Ambience` scripts; copy that folder across from the `.rbxm`.
 
+The NPC rebuild steps are in [docs/NPC_SETUP.md](docs/NPC_SETUP.md#editing-or-regenerating).
+
 `tools/test_ambience.luau` runs the lighting scripts against the built model outside Roblox.
+`tools/test_npcs.luau` checks every NPC rig, and `tools/check_npcs.py` checks every marker, route
+and arena against the map.
 `tools/check.py` verifies the footprint, looks for overlapping buildings and flood-fills the
 streets to confirm every area is reachable on foot. `tools/preview/render.js` draws the pictures
 above (needs `three@0.160.0` and Playwright).

@@ -1,13 +1,22 @@
 // Renders build/parts.json with three.js in headless Chromium (a rough stand-in for Studio).
-// usage: node render.js <three.min.js> <outDir> [viewName ...]
+// usage: node render.js <three.min.js> <outDir> [--parts file.json] [--views views.json] [viewName ...]
+//   --views replaces the built-in views; each view: { pos, look, fov | ortho, w, h, fog, fogd, sun: [dx,dy,dz] }
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 
 const threePath = process.argv[2];
 const outDir = process.argv[3];
-const only = process.argv.slice(4);
-const parts = fs.readFileSync(path.join(__dirname, '../../build/parts.json'), 'utf8');
+const rest = process.argv.slice(4);
+let partsFile = path.join(__dirname, '../../build/parts.json');
+let viewsFile = null;
+const only = [];
+for (let i = 0; i < rest.length; i++) {
+  if (rest[i] === '--parts') partsFile = rest[++i];
+  else if (rest[i] === '--views') viewsFile = rest[++i];
+  else only.push(rest[i]);
+}
+const parts = fs.readFileSync(partsFile, 'utf8');
 
 const VIEWS = {
   plan:      { ortho: 520, pos: [0, 600, 0], look: [0, 0, 0], up: [0, 0, -1], w: 1800, h: 1800, fog: false },
@@ -42,6 +51,11 @@ const VIEWS = {
   stlambert: { pos: [-205, 8, 100], look: [-340, 14, -10], fov: 70 },
 };
 
+if (viewsFile) {
+  for (const k of Object.keys(VIEWS)) delete VIEWS[k];
+  Object.assign(VIEWS, JSON.parse(fs.readFileSync(viewsFile, 'utf8')));
+}
+
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
@@ -65,6 +79,7 @@ const VIEWS = {
     const sc = sun.shadow.camera; sc.left = -760; sc.right = 760; sc.top = 760; sc.bottom = -760; sc.near = 10; sc.far = 2200;
     sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.6;
     scene.add(sun);
+    scene.add(sun.target);
 
     const boxG = new THREE.BoxGeometry(1, 1, 1);
     const cylG = new THREE.CylinderGeometry(0.5, 0.5, 1, 20); cylG.rotateZ(Math.PI / 2);
@@ -108,6 +123,17 @@ const VIEWS = {
       if (v.ortho) cam = new THREE.OrthographicCamera(-v.ortho, v.ortho, v.ortho * h / w, -v.ortho * h / w, 1, 3000);
       else cam = new THREE.PerspectiveCamera(v.fov || 60, w / h, 0.5, 3000);
       cam.position.set(...v.pos); if (v.up) cam.up.set(...v.up); cam.lookAt(...v.look);
+      if (v.sun) {
+        sun.position.set(v.look[0] + v.sun[0], v.look[1] + v.sun[1], v.look[2] + v.sun[2]);
+        sun.target.position.set(...v.look);
+        const r = v.shadowSpan || 120;
+        sc.left = -r; sc.right = r; sc.top = r; sc.bottom = -r; sc.updateProjectionMatrix();
+      } else {
+        sun.position.set(-520, 520, 380); sun.target.position.set(0, 0, 0);
+        sc.left = -760; sc.right = 760; sc.top = 760; sc.bottom = -760; sc.updateProjectionMatrix();
+      }
+      sun.target.updateMatrixWorld();
+      if (v.bg) scene.background = new THREE.Color(v.bg); else scene.background = sky;
       scene.fog = v.fog === false ? null : new THREE.FogExp2(sky, v.fogd || 0.0007);
       renderer.render(scene, cam);
       return document.getElementById('c').toDataURL('image/png');
