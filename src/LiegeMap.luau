@@ -2,10 +2,12 @@
 --[[
 	Liège in the 1800s (a c. 1870-1880 snapshot) — procedural map generator.
 
-	Returns a function:   build(config?, R?) -> Model, Folder, stats
+	Returns a function:   build(config?, R?) -> Model, stats
 	  config.seed         number   layout seed for house variation (default 1867)
 	  config.lampLights   boolean  put a PointLight in every street lamp (default true)
 	  config.spawnLocations boolean  emit real SpawnLocations instead of marker parts (default false)
+	  config.scripts      table    { core, server, client } sources of src/Ambience; when given, the
+	                               ambience scripts are embedded in the model (the Lune build does this)
 	  R                   table    {Instance, Vector3, CFrame, Color3, Enum, UDim2, Font}; defaults to Roblox globals.
 	                               (Lets the same file run under Lune to produce the .rbxm.)
 
@@ -109,6 +111,7 @@ return function(config, R)
 			if o.t then p.Transparency = o.t end
 			if o.refl then p.Reflectance = o.refl end
 		end
+		if name == "Window" and mat.Name == "Neon" then p:AddTag("LiegeLitWindow") end
 		p.Parent = parent
 		stats.parts += 1
 		return p
@@ -327,6 +330,7 @@ return function(config, R)
 		y0 = y0 or 0
 		cylY(parent, x, y0, y0 + 11, z, 0.6, P.iron, M.Metal, { noshadow = true }, "LampPost")
 		local l = box(parent, x - 0.55, y0 + 11, z - 0.55, x + 0.55, y0 + 12.4, z + 0.55, P.lit, M.Neon, DECO, "Lantern")
+		l:AddTag("LiegeLamp")
 		if LAMP_LIGHTS then
 			local pl = Instance.new("PointLight")
 			pl.Range = 22
@@ -346,6 +350,36 @@ return function(config, R)
 		pl.Shadows = false
 		pl.Parent = l
 		stats.lights += 1
+	end
+	-- Flickering firelight + flame on a forge / furnace / hearth part.
+	local function fireGlow(part, range, brightness, flameSize)
+		local pl = Instance.new("PointLight")
+		pl.Name = "FireLight"
+		pl.Range = range
+		pl.Brightness = brightness
+		pl.Color = C(255, 140, 60)
+		pl.Shadows = false
+		pl:SetAttribute("BaseBrightness", brightness)
+		pl:AddTag("LiegeFire")
+		pl.Parent = part
+		local f = Instance.new("Fire")
+		f.Size = flameSize
+		f.Heat = 8
+		f.Color = C(255, 150, 60)
+		f.SecondaryColor = C(150, 50, 20)
+		f.Parent = part
+		stats.lights += 1
+	end
+	-- Chimney smoke (built-in Smoke object, no asset ids).
+	local function smoke(parent, x, y, z, size, opacity, rise, color)
+		local e = box(parent, x - 0.5, y - 0.5, z - 0.5, x + 0.5, y + 0.5, z + 0.5, P.coal, M.SmoothPlastic, { deco = true, t = 1 }, "SmokeEmitter")
+		local s = Instance.new("Smoke")
+		s.Size = size
+		s.Opacity = opacity
+		s.RiseVelocity = rise
+		s.Color = color or C(96, 92, 88)
+		s.Parent = e
+		stats.smoke = (stats.smoke or 0) + 1
 	end
 	local function tree(parent, x, z, y0, s)
 		y0 = y0 or 0
@@ -1335,6 +1369,7 @@ return function(config, R)
 			cylX(m, x0 + 2, x0 + 24, 6.8, zc, 6.6, green, M.Metal, nil, "Boiler")
 			cylX(m, x0 + 1, x0 + 2.4, 6.8, zc, 7, P.iron, M.Metal, { noshadow = true }, "Smokebox")
 			cylY(m, x0 + 4.5, 9.8, 15, zc, 2, P.iron, M.Metal, { noshadow = true }, "Chimney")
+			smoke(m, x0 + 4.5, 15.6, zc, 3, 0.3, 6, C(214, 214, 214))
 			cylY(m, x0 + 13, 9.8, 12, zc, 2.6, P.brass, M.Metal, DECO, "Dome")
 			box(m, x0 + 24, 3.4, zc - 3.3, x0 + 31, 12.5, zc + 3.3, green, M.Metal, nil, "Cab")
 			box(m, x0 + 23.4, 12.5, zc - 3.7, x0 + 32, 13.1, zc + 3.7, P.iron, M.Metal, { noshadow = true }, "CabRoof")
@@ -1406,6 +1441,7 @@ return function(config, R)
 			box(yards, p[1] + 3, 0, p[4] - 0.2, p[1] + 7, 7.5, p[4] + 0.25, P.darkwood, M.Wood, DECO, "Door")
 			winGrid(yards, S, p[4], p[1] + 9, p[3] - 1, 2, { 3 }, 3.4, 4.5, 0.3)
 			box(yards, p[3] - 4, 10, p[2] + 2, p[3] - 1.5, 19, p[2] + 4.5, P.brick[4], M.Brick, DECO, "ForgeChimney")
+			if rnd() < 0.5 then smoke(yards, p[3] - 2.75, 20, p[2] + 3.25, 2.5, 0.2, 3.5) end
 		end
 		for _, z in ipairs({ -250, -172, -116 }) do
 			box(yards, 398, 0, z, 420, 6, z + 1, C(120, 100, 86), M.Brick, { noshadow = true }, "YardWall")
@@ -1461,7 +1497,8 @@ return function(config, R)
 		box(at, 392, 0, -131.5, 406, 3.2, -128, P.wood, M.WoodPlanks, nil, "Workbench")
 		box(at, 394, 3.2, -130.6, 396, 4.4, -129, P.iron, M.Metal, DECO, "Vice")
 		box(at, 401, 0, -168.5, 408.5, 4, -161, P.brick[4], M.Brick, nil, "Forge")
-		box(at, 402, 4, -167.5, 407.5, 4.5, -162, P.ember, M.Neon, DECO, "Embers")
+		fireGlow(box(at, 402, 4, -167.5, 407.5, 4.5, -162, P.ember, M.Neon, DECO, "Embers"), 24, 1.6, 4)
+		smoke(at, 404.75, 43, -165.25, 3, 0.22, 4)
 		box(at, 401, 9, -168.5, 408.5, 14, -161, P.brick[4], M.Brick, { noshadow = true }, "ForgeHood")
 		box(at, 403, 25, -167, 406.5, 42, -163.5, P.brick[4], M.Brick, nil, "Chimney")
 		box(at, 396, 0, -158, 399, 2.4, -156.4, P.iron, M.Metal, nil, "Anvil")
@@ -1515,7 +1552,9 @@ return function(config, R)
 			cylY(es, p[1], 2.8, 3.2, p[2], 5, P.wood, M.WoodPlanks, { noshadow = true }, "Table")
 		end
 		box(es, 268, 0, 53, 278, 7, 54.5, P.brick[4], M.Brick, nil, "Fireplace")
-		box(es, 270, 0.4, 52.7, 276, 3, 53.1, P.ember, M.Neon, DECO, "Fire")
+		fireGlow(box(es, 270, 0.4, 52.7, 276, 3, 53.1, P.ember, M.Neon, DECO, "Fire"), 22, 1.4, 4)
+		box(es, 271, 24, 51, 275, 39, 54.5, P.brick[4], M.Brick, { noshadow = true }, "Chimney")
+		smoke(es, 273, 40, 52.75, 3, 0.2, 4)
 		barrel(es, 294, 50, 0)
 		barrel(es, 296.5, 52.5, 0)
 		ceilingLamp(es, 276, 13, 36, 26)
@@ -1535,11 +1574,11 @@ return function(config, R)
 			box(fo, 454, 0, z, 464, 62, z + 10, P.brick[2], M.Brick, nil, "Stack")
 			box(fo, 455.5, 62, z + 1.5, 462.5, 98, z + 8.5, P.brick[2], M.Brick, nil, "Stack")
 			box(fo, 455, 98, z + 1, 463, 100, z + 9, P.darkstone, M.Limestone, { noshadow = true }, "StackCap")
+			smoke(fo, 459, 101, z + 5, 16, 0.38, 9, C(62, 58, 56))
 		end
 		for _, z in ipairs({ 56, 106 }) do
 			box(fo, 440, 0, z, 458, 13, z + 18, P.brick[1], M.Brick, nil, "Furnace")
-			box(fo, 439.6, 2, z + 5, 440.1, 7, z + 13, P.ember, M.Neon, DECO, "FurnaceMouth")
-			ceilingLamp(fo, 434, 9, z + 9, 30)
+			fireGlow(box(fo, 439.6, 2, z + 5, 440.1, 7, z + 13, P.ember, M.Neon, DECO, "FurnaceMouth"), 34, 2, 7)
 			box(fo, 420, 0, z + 2, 432, 0.5, z + 16, P.sand, M.Sand, { noshadow = true }, "CastingPit")
 			cylY(fo, 426, 0.5, 4, z + 9, 4, P.iron, M.Metal, { noshadow = true }, "Mould")
 		end
@@ -1733,35 +1772,47 @@ return function(config, R)
 		stats.spawns = #pts
 	end
 
-	---------------------------------------------------------------- lighting preset (drag the children into Lighting)
-	local lighting = folder(root, "LightingPreset")
+	---------------------------------------------------------------- ambience: lighting scripts + interior zones
+	-- The scripts (src/Ambience) apply the mood to Lighting on their own once the map is in Workspace.
+	local ambience = folder(root, "Ambience")
+	ambience:SetAttribute("ManageLighting", true)
+	ambience:SetAttribute("Mood", "Dusk")
+	ambience:SetAttribute("CycleMinutes", 0)
+	ambience:SetAttribute("InteriorGrading", true)
+	ambience:SetAttribute("FireFlicker", true)
 	do
-		local a = Instance.new("Atmosphere")
-		a.Density = 0.36
-		a.Offset = 0.2
-		a.Color = C(200, 174, 146)
-		a.Decay = C(104, 90, 80)
-		a.Glare = 0.25
-		a.Haze = 2.1
-		a.Parent = lighting
-		local cc = Instance.new("ColorCorrectionEffect")
-		cc.Saturation = -0.12
-		cc.Contrast = 0.08
-		cc.TintColor = C(255, 242, 226)
-		cc.Parent = lighting
-		local bl = Instance.new("BloomEffect")
-		bl.Intensity = 0.5
-		bl.Size = 24
-		bl.Threshold = 1.3
-		bl.Parent = lighting
-		lighting:SetAttribute("ClockTime", 17.4)
-		lighting:SetAttribute("GeographicLatitude", 50.6)
-		lighting:SetAttribute("Brightness", 2.2)
-		lighting:SetAttribute("Ambient", C(74, 66, 62))
-		lighting:SetAttribute("OutdoorAmbient", C(112, 102, 96))
-		lighting:SetAttribute("EnvironmentDiffuseScale", 0.6)
-		lighting:SetAttribute("EnvironmentSpecularScale", 0.4)
+		-- Volumes the client script tests the camera against; each carries its own colour grade.
+		local zones = folder(ambience, "InteriorZones")
+		local function zone(name, x0, y0, z0, x1, y1, z1, tint, brightness, contrast, saturation)
+			local p = box(zones, x0, y0, z0, x1, y1, z1, P.lit, M.SmoothPlastic, { deco = true, t = 1 }, name)
+			p:SetAttribute("Tint", tint)
+			p:SetAttribute("Brightness", brightness)
+			p:SetAttribute("Contrast", contrast)
+			p:SetAttribute("Saturation", saturation)
+		end
+		zone("AtelierDolne", 367, 0, -169, 409, 14, -127, C(255, 214, 170), -0.04, 0.1, -0.05) -- forge glow
+		zone("BancDEpreuves", 405, 0, -409, 467, 18, -301, C(236, 228, 214), -0.06, 0.12, -0.2) -- powder smoke
+		zone("Estaminet", 263, 0, 17, 299, 13, 55, C(255, 206, 150), -0.03, 0.08, 0.05) -- lamplit and warm
+		zone("FonderieDeCanons", 377, 0, 31, 469, 24, 149, C(255, 190, 140), -0.05, 0.16, 0) -- furnace heat
+		zone("CathedraleSaintPaul", -289, 0, 251, -113, 40, 311, C(214, 224, 255), -0.08, 0.1, -0.15) -- cold stone
+		zone("HalleAuxViandes", 35, 0, -231, 69, 20, -197, C(240, 226, 206), -0.05, 0.1, -0.1)
+		zone("PassageLemonnier", -76, 0, 94, -12, 24, 110, C(255, 236, 206), 0.02, 0.04, 0.05) -- gaslit arcade
+	end
+	if config.scripts then
+		local core = Instance.new("ModuleScript")
+		core.Name = "AmbienceCore"
+		core.Source = config.scripts.core
+		core.Parent = ambience
+		local server = Instance.new("Script")
+		server.Name = "LiegeAmbience"
+		server.Source = config.scripts.server
+		server.Parent = ambience
+		local client = Instance.new("Script")
+		client.Name = "LiegeAmbienceClient"
+		client.RunContext = Enum.RunContext.Client
+		client.Source = config.scripts.client
+		client.Parent = ambience
 	end
 
-	return root, lighting, stats
+	return root, stats
 end

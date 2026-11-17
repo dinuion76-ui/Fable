@@ -9,6 +9,7 @@ local fs = require("@lune/fs")
 local roblox = require("@lune/roblox")
 local serde = require("@lune/serde")
 local generate = require("./src/LiegeMap")
+local Core = require("./src/Ambience/AmbienceCore")
 
 local R = {
 	Instance = roblox.Instance,
@@ -20,7 +21,13 @@ local R = {
 	Font = roblox.Font,
 }
 
-local map, lighting, stats = generate({}, R)
+local map, stats = generate({
+	scripts = {
+		core = fs.readFile("src/Ambience/AmbienceCore.luau"),
+		server = fs.readFile("src/Ambience/LiegeAmbience.server.luau"),
+		client = fs.readFile("src/Ambience/LiegeAmbienceClient.client.luau"),
+	},
+}, R)
 
 -- bounds + flat export
 local parts = {}
@@ -60,12 +67,8 @@ fs.writeFile("build/Liege1800s.rbxm", roblox.serializeModel({ map }))
 local game = roblox.Instance.new("DataModel")
 local ws = game:GetService("Workspace")
 local li = game:GetService("Lighting")
-for k, v in lighting:GetAttributes() do
-	li[k] = v
-end
-for _, c in lighting:GetChildren() do
-	c:Clone().Parent = li
-end
+-- bake the default mood in, so the place already looks right in Studio's edit mode
+Core.begin({ Lighting = li, Instance = roblox.Instance, Color3 = roblox.Color3 }).apply(Core.presets.Dusk)
 ws.StreamingEnabled = true
 ws.StreamingMinRadius = 192
 ws.StreamingTargetRadius = 640
@@ -81,7 +84,7 @@ spawn.Neutral = true
 spawn.Parent = ws
 fs.writeFile("build/Liege1800s_Preview.rbxl", roblox.serializePlace(game))
 
-print(string.format("parts %d  (lights %d, signs %d, spawns %d)", stats.parts, stats.lights, stats.signs, stats.spawns))
+print(string.format("parts %d  (lights %d, smoke %d, signs %d, spawns %d)", stats.parts, stats.lights, stats.smoke, stats.signs, stats.spawns))
 for k, v in counts do print("  " .. k, v) end
 print(string.format("bounds x[%.1f, %.1f] y[%.1f, %.1f] z[%.1f, %.1f]", lo[1], hi[1], lo[2], hi[2], lo[3], hi[3]))
 print(string.format("rbxm %.0f KB, rbxl %.0f KB", #fs.readFile("build/Liege1800s.rbxm") / 1024, #fs.readFile("build/Liege1800s_Preview.rbxl") / 1024))

@@ -25,16 +25,61 @@ materials, lighting, fog and the text on signs will look different in Studio.
 
 1. Drag `build/Liege1800s.rbxm` into Studio and parent the `Liege1800s` model to `Workspace`.
    Don't move it if you can avoid it: it is centred on the origin, street level is `y = 0`.
-2. Optional lighting (dusk, coal-smoke haze). Paste into the command bar:
+2. Lighting needs no setup: the map carries its own (see *Lighting and ambience* below) and
+   applies it when the game runs. To see it in Studio's edit mode too, paste into the command bar:
 
    ```lua
-   local preset = workspace.Liege1800s.LightingPreset
-   for name, value in preset:GetAttributes() do game.Lighting[name] = value end
-   for _, child in preset:GetChildren() do child.Parent = game.Lighting end
+   require(workspace.Liege1800s.Ambience.AmbienceCore).preview("Dusk")
    ```
 3. Spawns: `SpawnMarkers` holds 24 invisible, non-colliding parts (attribute `LiegeSpawn = true`)
    spread over both banks, the hillside and the citadel. Read their positions from your own spawn
    code, or delete the folder.
+
+## Lighting and ambience
+
+The `Ambience` folder inside the model holds three scripts that light the map by themselves.
+They have been run only in a mocked environment (`tools/test_ambience.luau`), not in Roblox, so
+expect to tune the numbers once you see them in Studio.
+
+**Four moods**, chosen with the `Mood` attribute on the `Ambience` folder:
+
+| Mood | Look |
+|---|---|
+| `Dusk` (default) | Low amber sun through coal haze, gas lamps just lit. |
+| `Night` | Blue fog; streets lit only by lamps, windows and forges. |
+| `Dawn` | Cold grey river mist, lamps still burning. |
+| `Overcast` | Flat grey working day; lamps and windows dark. |
+
+**Attributes on `Ambience`** (edit them in the Properties panel, or set them from your own scripts
+while the game runs; changes are picked up within a second):
+
+| Attribute | Default | Meaning |
+|---|---|---|
+| `Mood` | `Dusk` | Which mood to hold. |
+| `CycleMinutes` | `0` | `0` holds the mood. Above zero runs a full day/night cycle of that many minutes, blending through all four moods; the lamps and windows light at dusk and go out after dawn. |
+| `ManageLighting` | `true` | `false` makes the scripts leave `Lighting` completely alone. |
+| `InteriorGrading` | `true` | Colour shift when the camera is inside a building. |
+| `FireFlicker` | `true` | Flicker on forge, furnace and hearth lights. |
+
+**How it fits into an existing game**
+- It reuses your `Atmosphere` and `Clouds` if you have them and adds its own post effects named
+  `Liege…` next to yours, so your own effects are not deleted. Yours and the map's will stack; if
+  the result is too strong, disable one side.
+- It remembers every `Lighting` value it changes and puts them back when the map leaves
+  `Workspace`, so it should work with a round-based map loader. The restore on `:Destroy()` is the
+  part most worth checking in Studio.
+- `Lighting.Technology` cannot be set by a script. The moods are tuned for the default (Future).
+
+**What else is in the map for atmosphere**
+- Seven interior zones (`Ambience.InteriorZones`): the forge is warm, the cathedral cold, the
+  proof house smoky. Each zone part carries its own `Tint`, `Brightness`, `Contrast` and
+  `Saturation` attributes.
+- Chimney smoke on the foundry stacks, workshops, tavern and locomotive, and flames with
+  flickering light in the forge, both furnaces and the tavern hearth. These use Roblox's built-in
+  `Smoke` and `Fire` objects, so there are no asset ids to break.
+
+To restyle a mood, edit the numbers in the `presets` table at the top of
+`Ambience.AmbienceCore`.
 
 ## Layout
 
@@ -68,7 +113,7 @@ routes up, and you can drop down the terraces quickly.
 
 ## Optimisation
 
-- 9,328 parts in total: 8,140 `Part` and 1,188 `WedgePart`. No unions, meshes or textures.
+- 9,336 parts in total: 8,148 `Part` and 1,188 `WedgePart`. No unions, meshes or textures.
 - Everything is anchored and has `CanTouch = false`.
 - About two thirds of the parts are decoration (windows, doors, signs, chimneys): those also have
   `CanCollide`, `CanQuery` and `CastShadow` off, so they cost nothing in physics or raycasts.
@@ -76,7 +121,7 @@ routes up, and you can drop down the terraces quickly.
   streams well if you turn on `StreamingEnabled`.
 - Stairs are visual steps (non-colliding) over one invisible wedge named `StairRamp`. Don't delete
   the ramps: they are what players walk on.
-- 124 `PointLight`s, all with shadows off. If that is too many for low-end phones, regenerate with
+- 126 `PointLight`s, all with shadows off, and 7 smoke emitters. If that is too many for low-end phones, regenerate with
   `lampLights = false`, or delete the lights inside the `GasLamps` model.
 - `MapLimits` holds four invisible walls at the edge of the footprint.
 
@@ -113,6 +158,9 @@ map.Parent = workspace
 Options: `seed` (house variation), `lampLights` (default `true`), `spawnLocations` (emit real
 `SpawnLocation`s instead of marker parts, default `false`).
 
+The Studio route does not embed the `Ambience` scripts; copy that folder across from the `.rbxm`.
+
+`tools/test_ambience.luau` runs the lighting scripts against the built model outside Roblox.
 `tools/check.py` verifies the footprint, looks for overlapping buildings and flood-fills the
 streets to confirm every area is reachable on foot. `tools/preview/render.js` draws the pictures
 above (needs `three@0.160.0` and Playwright).
