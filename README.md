@@ -196,6 +196,9 @@ The NPC rebuild steps are in [docs/NPC_SETUP.md](docs/NPC_SETUP.md#editing-or-re
 `tools/test_ambience.luau` runs the lighting scripts against the built model outside Roblox.
 `tools/test_npcs.luau` checks every NPC rig, and `tools/check_npcs.py` checks every marker, route
 and arena against the map.
+`tools/inspect_place.luau` reports what a place or model file saved from Studio contains (maps,
+characters, tools, lighting, scripts) against what this repo provides:
+`lune run tools/inspect_place Arena.rbxl report.md`.
 `tools/check.py` verifies the footprint, looks for overlapping buildings and flood-fills the
 streets to confirm every area is reachable on foot. `tools/preview/render.js` draws the pictures
 above (needs `three@0.160.0` and Playwright).
