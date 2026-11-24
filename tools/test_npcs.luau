@@ -8,7 +8,6 @@
 	  - HipHeight puts the feet on the floor
 	  - clothing and props are massless and invisible to collisions, raycasts and Touched
 	  - the NPCCatalog module compiles and lists every model
-	  - every NPC marker in the map names a character that exists
 	It cannot check how anything looks; that needs Studio.
 ]]
 local fs = require("@lune/fs")
@@ -196,40 +195,6 @@ for _, rig in { "R15", "R6" } do
 	check(rig .. " model count", models == 63, models)
 	print(string.format("  %d models, %d to %d parts each", models, least, worst))
 end
-
-print("markers")
-local map = roblox.deserializeModel(fs.readFile("build/Liege1800s.rbxm"))[1]
-local markers = map:FindFirstChild("NPCMarkers")
-if check("map has NPCMarkers", markers ~= nil) then
-	local n = 0
-	for _, m in markers.Spawns:GetChildren() do
-		n += 1
-		check("spawn " .. m.Name .. " names a real character", ids[m:GetAttribute("NPCType")] ~= nil, m:GetAttribute("NPCType"))
-		check("spawn " .. m.Name .. " does not interact", m.Anchored and not m.CanCollide and not m.CanQuery and not m.CanTouch and m.Transparency == 1)
-		if m:GetAttribute("Behaviour") == "Patrol" then
-			check("spawn " .. m.Name .. " route exists", markers.PatrolRoutes:FindFirstChild(m:GetAttribute("Route")) ~= nil)
-		end
-	end
-	for _, f in markers.PatrolRoutes:GetChildren() do
-		check("route " .. f.Name .. " names a real character", ids[f:GetAttribute("NPCType")] ~= nil)
-		check("route " .. f.Name .. " has waypoints", f:FindFirstChild("P01") and f:FindFirstChild("P02"))
-	end
-	for _, f in markers.BossArenas:GetChildren() do
-		check("arena " .. f.Name .. " boss exists", ids[f:GetAttribute("Boss")] ~= nil)
-		check("arena " .. f.Name .. " parts", f:FindFirstChild("Bounds") and f:FindFirstChild("BossSpawn") and f:FindFirstChild("PlayerEntry") and f:FindFirstChild("Barriers"))
-		if f:FindFirstChild("Reinforcements") then
-			for _, a in f.Reinforcements:GetChildren() do
-				check("arena " .. f.Name .. " reinforcement " .. a.Name, ids[a:GetAttribute("NPCType")] ~= nil)
-			end
-		end
-	end
-	print(string.format("  %d spawn markers", n))
-end
-
-local place = roblox.deserializePlace(fs.readFile("build/Liege1800s_Preview.rbxl"))
-local preview = place:GetService("Workspace"):FindFirstChild("PreviewNPCs")
-check("preview place has NPCs", preview and #preview:GetChildren() >= 90, preview and #preview:GetChildren())
-check("preview place has NPC templates in ServerStorage", place:GetService("ServerStorage"):FindFirstChild("LiegeNPCs") ~= nil)
 
 print(string.format("\n%d checks, %s", checks, failures == 0 and "ALL PASSED" or (failures .. " FAILED")))
 if failures > 0 then error("NPC tests failed") end

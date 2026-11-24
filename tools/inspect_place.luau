@@ -2,8 +2,7 @@
 	lune run tools/inspect_place <place.rbxl | model.rbxm> [report.md]
 
 	Reads a Roblox place (or model) file and writes a Markdown report of what is in it, set against
-	what this repository provides (the Liège map, its Ambience lighting, the LiegeNPCs characters and
-	their markers). Used to compare a game made in Studio with the generated assets.
+	what this repository provides (the Liège duel map, its Ambience lighting and the LiegeNPCs characters). Used to compare a game made in Studio with the generated assets.
 
 	Read-only: it never writes to the place file.
 ]]
@@ -115,11 +114,8 @@ for _, e in entries do
 	do
 		local n = count(c, isPart) + (c:IsA("BasePart") and 1 or 0)
 		local notes = {}
-		if c.Name == "Liege1800s" then
-			table.insert(notes, "the Liège map from this repo")
-			if not c:FindFirstChild("Ambience") then table.insert(notes, "**no Ambience folder (older copy)**") end
-			if not c:FindFirstChild("NPCMarkers") then table.insert(notes, "**no NPCMarkers (older copy)**") end
-		end
+		if c.Name == "LiegeDuel" then table.insert(notes, "the 250 x 250 duel map from this repo") end
+		if c.Name == "Liege1800s" then table.insert(notes, "**the old 1000-stud map (scrapped; replace with LiegeDuel)**") end
 		if c.Name == "LiegeNPCs" then table.insert(notes, "the NPC templates from this repo (" .. tostring(c:GetAttribute("Rig")) .. ")") end
 		local unions = count(c, function(d) return d.ClassName == "UnionOperation" end)
 		local meshes = count(c, function(d) return d.ClassName == "MeshPart" end)
@@ -204,7 +200,7 @@ end
 w("## Scripts\n")
 local KEYWORDS = {
 	"PathfindingService", "Animator", "LoadAnimation", "ProximityPrompt", "Raycast", "GetPartBoundsInBox", "Touched",
-	"TweenService", "RemoteEvent", "DataStore", "Lighting", "Humanoid", "NPC", "Boss", "Arena", "Apache", "NPCMarkers",
+	"TweenService", "RemoteEvent", "DataStore", "Lighting", "Humanoid", "NPC", "Boss", "Arena", "Apache",
 	"LiegeNPCs", "Ambience", "CollectionService", "SetNetworkOwner", "PhysicsService",
 }
 local scripts = {}

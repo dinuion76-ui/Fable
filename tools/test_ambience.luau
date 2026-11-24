@@ -31,7 +31,7 @@ for name, src in sources do
 end
 
 -- the model exactly as shipped
-local map = roblox.deserializeModel(fs.readFile("build/Liege1800s.rbxm"))[1]
+local map = roblox.deserializeModel(fs.readFile("build/LiegeDuel.rbxm"))[1]
 local ambience = map:FindFirstChild("Ambience")
 local function getTagged(tag)
 	local out = {}
@@ -48,8 +48,8 @@ check("scripts embedded", ambience.AmbienceCore.Source == sources.core and ambie
 check("client script runs on the client", ambience.LiegeAmbienceClient.RunContext == roblox.Enum.RunContext.Client)
 check("server script uses default run context", ambience.LiegeAmbience.RunContext == roblox.Enum.RunContext.Legacy)
 local lamps, windows, fires = getTagged("LiegeLamp"), getTagged("LiegeLitWindow"), getTagged("LiegeFire")
-check("street lamps tagged (" .. #lamps .. ")", #lamps > 80)
-check("lit windows tagged (" .. #windows .. ")", #windows > 200)
+check("street lamps tagged (" .. #lamps .. ")", #lamps > 30)
+check("lit windows tagged (" .. #windows .. ")", #windows > 40)
 check("fire lights tagged (" .. #fires .. ")", #fires == 4)
 
 -- a fresh mocked game for each scenario
@@ -178,11 +178,11 @@ print("interior zones")
 do
 	local zones = ambience.InteriorZones
 	local V = roblox.Vector3.new
-	local z = Core.zoneAt(zones, V(380, 6, -148))
-	check("camera in Dolne's shop -> AtelierDolne", z and z.Name == "AtelierDolne", z and z.Name)
-	check("camera in the nave -> CathedraleSaintPaul", (Core.zoneAt(zones, V(-220, 10, 281)) or {}).Name == "CathedraleSaintPaul")
-	check("camera on Place du Marché -> none", Core.zoneAt(zones, V(-200, 6, -100)) == nil)
-	check("camera above the foundry roof -> none", Core.zoneAt(zones, V(420, 60, 90)) == nil)
+	local z = Core.zoneAt(zones, V(-40, 6, -57))
+	check("camera in Red's gunsmith -> Atelier_Red", z and z.Name == "Atelier_Red", z and z.Name)
+	check("camera in Blue's estaminet -> Estaminet_Blue", (Core.zoneAt(zones, V(-36, 6, 55)) or {}).Name == "Estaminet_Blue")
+	check("camera on Place du Marché -> none", Core.zoneAt(zones, V(0, 6, -40)) == nil)
+	check("camera above the workshop roof -> none", Core.zoneAt(zones, V(-40, 40, -57)) == nil)
 	local g = Core.gradeOf(z)
 	check("zone grade read from attributes", near(g.Contrast, 0.1) and near(g.Tint[1], 255) and near(g.Tint[3], 170))
 	check("neutral grade outdoors", Core.gradeOf(nil).Contrast == 0 and Core.gradeOf(nil).Tint[2] == 255)
@@ -278,9 +278,9 @@ do
 	check("creates its own colour grade", grade ~= nil)
 	for _ = 1, 120 do w.signals.Heartbeat:fire(1 / 60) end
 	check("neutral outdoors", near(grade.Contrast, 0) and near(grade.TintColor.B, 1), grade.Contrast)
-	camera.CFrame = roblox.CFrame.new(430, 6, 90) -- walk into the foundry
+	camera.CFrame = roblox.CFrame.new(36, 6, -55) -- walk into the estaminet
 	for _ = 1, 240 do w.signals.Heartbeat:fire(1 / 60) end
-	check("eases to the foundry grade indoors", near(grade.Contrast, 0.16) and math.abs(grade.TintColor.B - 140 / 255) < 0.01, grade.Contrast)
+	check("eases to the estaminet grade indoors", near(grade.Contrast, 0.08) and math.abs(grade.TintColor.B - 150 / 255) < 0.01, grade.Contrast)
 	local flickered = false
 	for _, l in fires do
 		if not near(l.Brightness, l:GetAttribute("BaseBrightness")) then flickered = true end

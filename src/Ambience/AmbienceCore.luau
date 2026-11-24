@@ -5,7 +5,7 @@
 	Everything here is plain data plus small functions, shared by:
 	  LiegeAmbience        (server Script)  applies the mood, runs the cycle, switches the gas lamps
 	  LiegeAmbienceClient  (client Script)  interior colour grading and firelight flicker
-	  Studio command bar   require(workspace.Liege1800s.Ambience.AmbienceCore).preview("Dusk")
+	  Studio command bar   require(workspace.LiegeDuel.Ambience.AmbienceCore).preview("Dusk")
 
 	Colours are {r, g, b} in 0-255 so moods can be blended with ordinary arithmetic.
 	To restyle the map, edit the numbers in `presets`; nothing else needs to change.

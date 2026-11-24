@@ -2083,15 +2083,14 @@ return function(R)
 	------------------------------------------------ bosses
 	def({
 		id = "BossButcher", name = "Le Boucher de la Batte", title = "Boss: the Butcher", category = "Boss", district = "WestBank",
-		where = "Halle aux Viandes on the Quai de la Batte (arena: NPCMarkers/BossArenas/Butcher).", behaviour = "Boss", health = 1800, speed = 13, variants = 1,
-		arena = "Butcher",
+		where = "Halle aux Viandes on the Quai de la Batte (needs an arena; none is built on the duel map).", behaviour = "Boss", health = 1800, speed = 13, variants = 1,
 		body = { scale = 1.35, width = 1.3, depth = 1.35, limb = 1.25, head = 1.05, legs = 0.95 },
 		lines = { "Fresh meat walked in on its own!", "Every carcass in this hall was once as brave as you.", "Hold still, I cut clean." },
 		moves = {
 			"Cleaver sweep: wide horizontal arc in front, heavy damage, slow wind-up.",
 			"Hook throw: chain hook pulls the player in for a cleaver chop.",
 			"Belly charge: straight-line rush; he stuns himself on the hall columns.",
-			"Below 40%: throws carcasses from the meat rails (use the MeatRail in the hall).",
+			"Below 40%: throws carcasses from the meat rails of his hall.",
 		},
 		outfit = function(K)
 			local A, s = K.A, K.s
@@ -2112,14 +2111,13 @@ return function(R)
 	})
 	def({
 		id = "BossFounder", name = "Le Maître Fondeur", title = "Boss: the Foundry Master", category = "Boss", district = "EastBank",
-		where = "Fonderie Royale de Canons (arena: NPCMarkers/BossArenas/Foundry).", behaviour = "Boss", health = 2600, speed = 10, variants = 1,
-		arena = "Foundry",
+		where = "Fonderie Royale de Canons (needs an arena; none is built on the duel map).", behaviour = "Boss", health = 2600, speed = 10, variants = 1,
 		body = { scale = 1.55, width = 1.3, depth = 1.2, limb = 1.3, head = 0.95 },
 		lines = { "The furnace is hungry.", "I cast the cannon that guard your Citadel. I can cast a coffin.", "Molten iron does not miss." },
 		moves = {
 			"Sledge slam: ground shockwave ring; the hammer head leaves a burning patch.",
 			"Ladle pour: arcs molten iron in a line; burning floor for a few seconds.",
-			"Furnace vent: opens a furnace; heat damage near the furnace mouths (FurnaceMouth parts).",
+			"Furnace vent: opens a furnace; heat damage near the furnace mouths.",
 			"Armoured: pauldrons and apron could take reduced damage; hits to the head or back do full.",
 		},
 		outfit = function(K)
@@ -2144,8 +2142,8 @@ return function(R)
 	})
 	def({
 		id = "BossApacheKing", name = "Le Roi des Apaches", title = "Boss: the Apache King", category = "Boss", district = "EastBank",
-		where = "Charbonnages de Longdoz coal yard (arena: NPCMarkers/BossArenas/ApacheKing).", behaviour = "Boss", health = 1400, speed = 20, variants = 1,
-		arena = "ApacheKing", holdsApache = true,
+		where = "Charbonnages de Longdoz coal yard (needs an arena; none is built on the duel map).", behaviour = "Boss", health = 1400, speed = 20, variants = 1,
+		holdsApache = true,
 		body = { scale = 1.12, width = 0.95, depth = 0.95, limb = 0.92, head = 0.98, legs = 1.06 },
 		lines = { "So. The city sends a dog.", "Liège made this little revolver. Liège will bury you with it.", "Les gars! Finish this one." },
 		moves = {

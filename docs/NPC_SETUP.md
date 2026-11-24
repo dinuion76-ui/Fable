@@ -3,6 +3,11 @@
 Everything here is models and data. No NPC moves, talks or fights yet; that is the scripting you
 will do on PC. This file says what exists, what to decide, and what to do, in order.
 
+The NPCs were made for the 1000-stud city map, which has since been replaced by the 250 × 250
+duel map. They are now a standalone library: nothing is placed on the duel map. The `where` notes
+below describe each character's setting in Liège, not a spot on the current map. The duel map's
+preview place uses two of the Apaches as stand-ins for players, for scale.
+
 ![The three bosses](npc_bosses.jpg)
 
 These pictures come from a stand-in renderer, not Roblox Studio. Nothing in this folder has been
@@ -14,8 +19,6 @@ opened in Studio yet; see [Not verified](#not-verified-check-these-first).
 |---|---|
 | `build/LiegeNPCs_R15.rbxm` | All 63 characters as R15 rigs, plus the `NPCCatalog` module. |
 | `build/LiegeNPCs_R6.rbxm` | The same 63 characters as R6 rigs. |
-| `build/Liege1800s.rbxm` | The map, now with an `NPCMarkers` folder (spawns, patrol routes, boss arenas). |
-| `build/Liege1800s_Preview.rbxl` | The map with 98 characters standing at their markers, and the R15 set in `ServerStorage`. |
 
 **63 models from 38 character types**: 3 bosses, 7 named characters, 4 Apache gang types
 (2 variants each), and 24 kinds of townsfolk, workers, soldiers and police, most in 2–3 colour or
@@ -23,7 +26,7 @@ face variants. Every model is 39–73 parts (R15) or 35–69 (R6).
 
 ### Bosses
 
-| Id | Who | Arena |
+| Id | Who | Setting |
 |---|---|---|
 | `BossButcher` | *Le Boucher de la Batte*: huge, cleaver and meat hook, blood-spattered apron | Halle aux Viandes, Quai de la Batte |
 | `BossFounder` | *Le Maître Fondeur*: hooded foundry master, glowing goggles, red-hot sledgehammer and a ladle of molten iron | Fonderie Royale de Canons |
@@ -86,12 +89,9 @@ NPCs don't have to match the players' rig type; only the animations you play on 
 
 1. Drag `LiegeNPCs_R15.rbxm` (or `_R6`) into Studio and move the `LiegeNPCs` folder into
    **ServerStorage**. These are templates; clone them at runtime.
-2. Re-import `build/Liege1800s.rbxm`. Only the new copy has `NPCMarkers`.
-3. To look around first, open `Liege1800s_Preview.rbxl`. Its NPCs have their `HumanoidRootPart`
-   anchored so they stand still in Play mode.
 
-The gallery models sit in rows south of the map (z ≈ 620–720), outside the play area, so dropping
-the folder into Workspace by mistake doesn't put anyone in the streets.
+The gallery models sit in rows at z ≈ 620–720, far outside the duel map, so dropping the folder into
+Workspace by mistake doesn't put anyone in the streets.
 
 ## What is inside each model
 
@@ -130,33 +130,10 @@ Gentleman_1  (Model, PrimaryPart = HumanoidRootPart)
 where it belongs, suggested behaviour, health, walk speed, model names, dialogue `Lines` and, for
 bosses, `Moves` (attack ideas) and `Arena`.
 
-## Markers in the map (`Liege1800s.NPCMarkers`)
-
-All marker parts are invisible, anchored, and don't collide, raycast or touch. Each faces its
-`LookVector`.
-
-- **`Spawns`** (95 parts, tag `LiegeNPCSpawn`): attribute `NPCType` (an `NPCId`), `Behaviour`
-  (`Idle`, `Work`, `Wander`, `Guard`, `Patrol`, `Shopkeeper`, `QuestGiver`, `Hostile`), and where
-  relevant `WanderRadius`, `Route` or `Gang`. Pick a variant yourself (e.g. at random).
-- **`PatrolRoutes`** (7 folders): waypoints `P01, P02…` (tag `LiegePatrolPoint`); the folder has
-  `NPCType` and `Loop` (`true` = circuit, `false` = walk back and forth). The waypoints were
-  path-found around the street clutter, so straight walking between them is clear.
-- **`BossArenas`** (`Butcher`, `Foundry`, `ApacheKing`): `Bounds` (the arena volume, for
-  `workspace:GetPartBoundsInBox`), `BossSpawn`, `PlayerEntry`, `Barriers` (parts sized to every
-  doorway and every window low enough to jump through: set `CanCollide = true` to lock the fight,
-  false to open it) and, for the Apache King,
-  `Reinforcements` (where his gang comes in).
-
-Every spawn, waypoint and arena was checked against the map's geometry (`tools/check_npcs.py`):
-there is a floor under each, nothing stands where the character stands, ground-level ones can walk
-to the rest of the town, every patrol leg is clear, and each boss fits its arena and can be reached
-from `PlayerEntry`.
-
 A minimal spawner, to show how the pieces fit (not shipped as a script):
 
 ```lua
 local templates = game.ServerStorage.LiegeNPCs
-local markers = workspace.Liege1800s.NPCMarkers
 
 local function template(npcType)
 	local list = {}
@@ -166,11 +143,12 @@ local function template(npcType)
 	return list[math.random(#list)]
 end
 
-for _, marker in markers.Spawns:GetChildren() do
-	local npc = template(marker:GetAttribute("NPCType")):Clone()
-	npc:PivotTo(marker.CFrame)  -- every character's pivot is at its feet
+local function spawnAt(npcType, cframe)
+	local npc = template(npcType):Clone()
+	npc:PivotTo(cframe)  -- every character's pivot is at its feet
 	npc.Parent = workspace
 	npc.PrimaryPart:SetNetworkOwner(nil)
+	return npc
 end
 ```
 
@@ -182,8 +160,8 @@ end
    (use an R15 character for R15 NPCs, R6 for R6). Then make a few idles per `Behaviour`:
    guards at attention, vendors arms-crossed, workers hammering or shovelling, the priest with the
    book raised, and an attack set per boss (see `Moves` in the catalogue).
-2. **Behaviour scripts.** Read the markers; give `Wander` NPCs a random walk inside
-   `WanderRadius`, walk `Patrol` NPCs along their route, leave the rest standing. For
+2. **Behaviour scripts.** Give each character the behaviour named in its `Behaviour` attribute:
+   a random walk for `Wander`, a route for `Patrol`, standing for the rest. For
    `PathfindingService` use `AgentRadius = 2`, `AgentHeight = 6` for townsfolk and scale both by
    the model's `Scale` attribute for bosses (up to 1.55).
 3. **Anchor whoever doesn't move.** Shopkeepers, guards and vendors can keep
@@ -191,10 +169,9 @@ end
    only NPCs that walk, and `SetNetworkOwner(nil)` on those.
 4. **Collision group.** Put all NPCs in a group that does not collide with itself, so crowds and
    patrols don't shove each other.
-5. **Bosses.** Detect a player in `Bounds`, enable the `Barriers`, spawn the boss at `BossSpawn`,
-   and build the moves listed in the catalogue. The Foundry Master's sledge already glows and
-   burns (`PointLight` and `Fire` on its head). The catalogue suggests the Apache King calls his
-   gang in from the `Reinforcements` markers at 66% and 33% health.
+5. **Bosses.** They need an arena (the duel map has none) and the moves listed in the catalogue.
+   The Foundry Master's sledge already glows and burns (`PointLight` and `Fire` on its head). The
+   catalogue suggests the Apache King calls his gang in at 66% and 33% health.
 6. **The Apache revolver.** Models with `HoldsApache = true` (the King and the gunmen) have an empty
    right hand. Either give them your revolver Tool with `Humanoid:EquipTool()`, or weld the model to
    `RightGripAttachment` (in `RightHand` on R15, `Right Arm` on R6).
@@ -205,15 +182,14 @@ end
    bosses at least.
 9. **Death.** `BreakJointsOnDeath` is off: swap the `Motor6D`s for `BallSocketConstraint`s on death
    for a ragdoll, or play a death animation.
-10. **Performance.** All 98 placed characters are about 5,400 parts and 98 Humanoids. That is fine
-    on PC; on phones, spawn ambient NPCs only within ~250 studs of a player, or start with the
-    named characters, guards and gangs and add crowds later.
+10. **Performance.** Each character is 35–73 parts and one Humanoid; around 100 at once is fine on
+    PC. On phones, keep crowds small or spawn them only near players.
 
 ## Not verified (check these first)
 
-- **Nothing has been opened in Studio.** The models were built and checked by script (15,588
+- **Nothing has been opened in Studio.** The models were built and checked by script (15,365
   checks: joints line up with the parts, every part is jointed to the root, feet on the floor,
-  outfit flags, catalogue compiles, markers name real characters), but no animation has been
+  outfit flags, catalogue compiles), but no animation has been
   played on them.
 - **R15 joint positions** follow Roblox's naming and orientation but not its exact proportions.
   Stock animations should play correctly; elbows and shoulders may bend a little higher or lower
@@ -243,11 +219,9 @@ end
   called `Attach`) or it will snap back when the game runs.
 - **From the source**: the characters are defined in `src/LiegeNPCs.luau` (the `ROSTER` section,
   one `def({...})` per character, using wardrobe functions such as `K.tophat`, `K.apron`,
-  `K.cane`). Markers are in `src/LiegeNPCPlacements.luau`. Rebuild and re-test with:
+  `K.cane`). Rebuild and re-test with:
 
   ```sh
   lune run build
   lune run tools/test_npcs
-  python3 tools/check_npcs.py
-  python3 tools/plan_routes.py   # only if you changed patrol routes or the map
   ```
